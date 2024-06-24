@@ -33,6 +33,10 @@ namespace Sokoban
         {
             return new Vector2Int(v1.x + v2.x , v1.y+ v2.y);
         }
+        public static Vector2Int operator -(Vector2Int v1, Vector2Int v2)
+        {
+            return new Vector2Int(v1.x - v2.x, v1.y - v2.y);
+        }
 
         public static bool operator ==(Vector2Int v1, Vector2Int v2)
         {
@@ -56,6 +60,7 @@ namespace Sokoban
 
         // 엔티티
         private static Vector2Int wallPos;
+        private static Vector2Int boxPos;
 
         // 엔티티 정보
         private static char[] entityText = new char[10];
@@ -115,11 +120,7 @@ namespace Sokoban
 
         private static void CalculateGameLogic()
         {
-            bool isPlayerMoveValid = CheckMoveValid();
-            if (isPlayerMoveValid)
-            {
-                HandlePlayerTurn();
-            }
+            HandlePlayerTurn();
             HandleEntityturn();
         }
 
@@ -128,23 +129,56 @@ namespace Sokoban
             
         }
 
-        private static bool CheckMoveValid()
+        private static void HandlePlayerTurn()
         {
-            if ((playerPos + playerInput) == wallPos)
+            bool isPlayerBlocked = false;
+            isPlayerBlocked |= CheckCollisionWall();
+            isPlayerBlocked |= CheckCollisionPushable();
+            if (!isPlayerBlocked)
             {
-                return false;
-            }
-            else
-            {
-                return true;
+                MovePlayer();
             }
         }
 
-
-        private static void HandlePlayerTurn()
+        private static bool CheckCollisionPushable()
         {
-            
-            MovePlayer();
+            bool isPlayerBlocked = false;
+            if (playerPos + playerInput == boxPos)
+            {
+                if (CheckEntityBlocked(boxPos, playerInput))
+                {
+                    return true;
+                }
+                else
+                {
+                    boxPos += playerInput;
+                }
+            }
+            return false;
+        }
+
+        private static bool CheckEntityBlocked(Vector2Int pos, Vector2Int dir)
+        {
+            if (pos + dir == wallPos)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        private static bool CheckCollisionWall()
+        {
+            if ((playerPos + playerInput) == wallPos)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
         }
 
         private static void MovePlayer()
@@ -163,6 +197,7 @@ namespace Sokoban
         {
             wallPos = new Vector2Int(5, 3);
             playerPos = new Vector2Int(5, 8);
+            boxPos = new Vector2Int(4, 2);
         }
 
         private static void InitializeGameData()
@@ -193,24 +228,7 @@ namespace Sokoban
             Console.Clear();
             PrintEntityAtPos(playerPos, EntityType.PLAYER);
             PrintEntityAtPos(wallPos, EntityType.WALL);
-        }
-
-        static void PrintEntityAtPos(int xPos, int yPos, char symbol)
-        {
-            Console.SetCursorPosition(xPos, yPos);
-            Console.Write(symbol);
-        }
-
-        static void PrintEntityAtPos(Vector2Int pos, char symbol)
-        {
-            Console.SetCursorPosition(pos.x, pos.y);
-            Console.Write(symbol);
-        }
-
-        static void PrintEntityAtPos(int xPos, int yPos, EntityType type)
-        {
-            Console.SetCursorPosition(xPos, yPos);
-            Console.Write(entityText[(int)type]);
+            PrintEntityAtPos(boxPos, EntityType.BOX);
         }
 
         static void PrintEntityAtPos(Vector2Int pos, EntityType type)
@@ -218,9 +236,5 @@ namespace Sokoban
             Console.SetCursorPosition(pos.x, pos.y);
             Console.Write(entityText[(int)type]);
         }
-
-
-
-
     }
 }
