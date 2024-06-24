@@ -33,7 +33,16 @@ namespace Sokoban
         {
             return new Vector2Int(v1.x + v2.x , v1.y+ v2.y);
         }
-        
+
+        public static bool operator ==(Vector2Int v1, Vector2Int v2)
+        {
+            return (v1.x == v2.x && v1.y == v2.y);
+        }
+
+        public static bool operator !=(Vector2Int v1, Vector2Int v2)
+        {
+            return !(v1.x == v2.x && v1.y == v2.y);
+        }
     }
 
     internal class Program
@@ -41,9 +50,14 @@ namespace Sokoban
         //게임 종료 여부
         static bool gameOver;
 
-        //플레이어 위치
+        //플레이어
         private static Vector2Int playerPos;
         static Vector2Int playerInput;
+
+        // 엔티티
+        private static Vector2Int wallPos;
+
+        // 엔티티 정보
         private static char[] entityText = new char[10];
 
         static void Main()
@@ -114,15 +128,22 @@ namespace Sokoban
             
         }
 
-        [Obsolete("현재 true만을 리턴합니다.")]
         private static bool CheckMoveValid()
         {
-            return true;
+            if ((playerPos + playerInput) == wallPos)
+            {
+                return false;
+            }
+            else
+            {
+                return true;
+            }
         }
 
 
         private static void HandlePlayerTurn()
         {
+            
             MovePlayer();
         }
 
@@ -140,6 +161,7 @@ namespace Sokoban
 
         private static void InitializeEntityPos()
         {
+            wallPos = new Vector2Int(5, 3);
             playerPos = new Vector2Int(5, 8);
         }
 
@@ -170,6 +192,7 @@ namespace Sokoban
         {
             Console.Clear();
             PrintEntityAtPos(playerPos, EntityType.PLAYER);
+            PrintEntityAtPos(wallPos, EntityType.WALL);
         }
 
         static void PrintEntityAtPos(int xPos, int yPos, char symbol)
