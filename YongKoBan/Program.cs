@@ -8,9 +8,11 @@ namespace Sokoban
 
     public enum EntityType
     {
-        PLAYER = 0,
-        WALL = 1,
-        BOX = 2,
+        Player = 0,
+        Wall = 1,
+        Box = 2,
+        Goal = 3,
+
     }
     public struct Vector2Int
     {
@@ -61,6 +63,7 @@ namespace Sokoban
         // 엔티티
         private static Vector2Int wallPos;
         private static Vector2Int boxPos;
+        private static Vector2Int goalPos;
 
         // 엔티티 정보
         private static char[] entityText = new char[10];
@@ -126,7 +129,15 @@ namespace Sokoban
 
         private static void HandleEntityturn()
         {
-            
+            CheckBoxGoal();
+        }
+
+        private static void CheckBoxGoal()
+        {
+            if (goalPos == boxPos)
+            {
+                boxPos = new Vector2Int(-1, -1);
+            }
         }
 
         private static void HandlePlayerTurn()
@@ -198,6 +209,7 @@ namespace Sokoban
             wallPos = new Vector2Int(5, 3);
             playerPos = new Vector2Int(5, 8);
             boxPos = new Vector2Int(4, 2);
+            goalPos = new Vector2Int(7, 1);
         }
 
         private static void InitializeGameData()
@@ -208,9 +220,10 @@ namespace Sokoban
 
         private static void InitializeEntityList()
         {
-            entityText[(int)EntityType.PLAYER] = 'P';
-            entityText[(int)EntityType.WALL] = '#';
-            entityText[(int)EntityType.BOX] = 'O';
+            entityText[(int)EntityType.Player] = 'P';
+            entityText[(int)EntityType.Wall] = '#';
+            entityText[(int)EntityType.Box] = 'O';
+            entityText[(int)EntityType.Goal] = 'G';
         }
 
         private static void InitializeConsole()
@@ -226,13 +239,19 @@ namespace Sokoban
         static void RenderGameScreen()
         {
             Console.Clear();
-            PrintEntityAtPos(playerPos, EntityType.PLAYER);
-            PrintEntityAtPos(wallPos, EntityType.WALL);
-            PrintEntityAtPos(boxPos, EntityType.BOX);
+            PrintEntityAtPos(playerPos, EntityType.Player);
+            PrintEntityAtPos(wallPos, EntityType.Wall);
+            PrintEntityAtPos(boxPos, EntityType.Box);
+            PrintEntityAtPos(goalPos, EntityType.Goal);
         }
 
         static void PrintEntityAtPos(Vector2Int pos, EntityType type)
         {
+            // false value
+            if (pos.x == -1 && pos.y == -1)
+            {
+                return;
+            }
             Console.SetCursorPosition(pos.x, pos.y);
             Console.Write(entityText[(int)type]);
         }
