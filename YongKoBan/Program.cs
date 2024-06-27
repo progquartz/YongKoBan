@@ -50,6 +50,7 @@ namespace Sokoban
         {
             return !(v1.x == v2.x && v1.y == v2.y);
         }
+
     }
 
     internal class Program
@@ -57,15 +58,23 @@ namespace Sokoban
         //게임 종료 여부
         static bool gameOver;
 
+        private const int MaxEntityLimit = 10;
+
         //플레이어
         private static Vector2Int playerPos;
-        static Vector2Int playerInput;
+        static Vector2Int playerInputDir;
 
         // 엔티티
-        private static Vector2Int wallPos;
-        private static Vector2Int boxPos;
-        private static Vector2Int goalPos;
-        private static bool isGoalUsed = false;
+        private static Vector2Int[] wallPosList;
+        private static int wallCount = 0;
+
+        private static Vector2Int[] boxPosList;
+        private static int boxCount = 0;
+
+        private static Vector2Int[] goalPosList;
+        private static bool[] goalStateList;
+        private static int goalCount = 0;
+        
 
         // 엔티티 정보
         private static char[] entityText = new char[10];
@@ -101,24 +110,24 @@ namespace Sokoban
             ConsoleKeyInfo currentKeyInfo = Console.ReadKey();
             Console.Clear();
 
-            playerInput = new Vector2Int();
+            playerInputDir = new Vector2Int();
             switch (currentKeyInfo.Key)
             {
                 case ConsoleKey.LeftArrow:
 
-                    playerInput.x -= 1;
+                    playerInputDir.x -= 1;
                     break;
 
                 case ConsoleKey.RightArrow:
-                    playerInput.x += 1;
+                    playerInputDir.x += 1;
                     break;
 
                 case ConsoleKey.UpArrow:
-                    playerInput.y -= 1;
+                    playerInputDir.y -= 1;
                     break;
 
                 case ConsoleKey.DownArrow:
-                    playerInput.y += 1;
+                    playerInputDir.y += 1;
                     break;
             }
         }
@@ -136,10 +145,16 @@ namespace Sokoban
 
         private static void CheckBoxGoal()
         {
-            if (!isGoalUsed &&goalPos == boxPos)
+            for (int goalIndex = 0; goalIndex < goalPosList.Length; goalIndex++)
             {
-                boxPos = new Vector2Int(-1, -1);
-                isGoalUsed = true;
+                for (int boxIndex = 0; boxIndex < boxPosList.Length; boxIndex++)
+                {
+                    if (!goalStateList[goalIndex] && goalPosList[goalIndex] == boxPosList[boxIndex])
+                    {
+                        boxPosList[boxIndex] = new Vector2Int(-1, -1);
+                        goalStateList[goalIndex] = true;
+                    }
+                }
             }
         }
 
@@ -157,47 +172,74 @@ namespace Sokoban
         private static bool CheckCollisionPushable()
         {
             bool isPlayerBlocked = false;
-            if (playerPos + playerInput == boxPos)
+            for (int i = 0; i < boxCount; i++)
             {
-                if (CheckEntityBlocked(boxPos, playerInput))
+                if (playerPos + playerInputDir == boxPosList[i])
+                {
+                    if (CheckPushedEntityBlocked(boxPosList[i], playerInputDir))
+                    {
+                        return true;
+                    }
+                    else
+                    {
+                        boxPosList[i] += playerInputDir;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static bool CheckPushedEntityBlocked(Vector2Int pos, Vector2Int dir)
+        {
+            bool isBlocked = false;
+
+            isBlocked |= CheckPushedEntityBlockedByBox(pos, dir);
+            isBlocked |= CheckPushedEntityBlockedByWall(pos, dir);
+
+            return isBlocked;
+        }
+
+        private static bool CheckPushedEntityBlockedByWall(Vector2Int pos, Vector2Int dir)
+        {
+            for (int i = 0; i < wallCount; i++)
+            {
+                if (pos + dir == wallPosList[i])
                 {
                     return true;
-                }
-                else
-                {
-                    boxPos += playerInput;
                 }
             }
             return false;
         }
 
-        private static bool CheckEntityBlocked(Vector2Int pos, Vector2Int dir)
+        private static bool CheckPushedEntityBlockedByBox(Vector2Int pos, Vector2Int dir)
         {
-            if (pos + dir == wallPos)
+            for (int i = 0; i < boxCount; i++)
             {
-                return true;
+                if (pos + dir == boxPosList[i])
+                {
+                    return true;
+                }
             }
-            else
-            {
-                return false;
-            }
+            return false;
         }
 
         private static bool CheckCollisionWall()
         {
-            if ((playerPos + playerInput) == wallPos)
+            for (int i = 0; i < wallCount; i++)
             {
-                return true;
+                if ((playerPos + playerInputDir) == wallPosList[i])
+                {
+                    return true;
+                }
             }
-            else
-            {
-                return false;
-            }
+
+            return false;
         }
 
         private static void MovePlayer()
         {
-            playerPos += playerInput;
+            playerPos += playerInputDir;
         }
 
         static void InitializeGame()
@@ -209,15 +251,30 @@ namespace Sokoban
 
         private static void InitializeEntityPos()
         {
-            wallPos = new Vector2Int(5, 3);
+            
             playerPos = new Vector2Int(5, 8);
-            boxPos = new Vector2Int(4, 2);
-            goalPos = new Vector2Int(7, 1);
+
+            wallPosList[wallCount++] = new Vector2Int(5, 3);
+            wallPosList[wallCount++] = new Vector2Int(5, 4);
+            wallPosList[wallCount++] = new Vector2Int(5, 5);
+
+            boxPosList[boxCount++] = new Vector2Int(4, 2);
+            boxPosList[boxCount++] = new Vector2Int(4, 3);
+            boxPosList[boxCount++] = new Vector2Int(4, 1);
+
+            goalPosList[goalCount++] = new Vector2Int(7, 1);
+            goalPosList[goalCount++] = new Vector2Int(7, 2);
+            goalPosList[goalCount++] = new Vector2Int(7, 3);
+
         }
 
         private static void InitializeGameData()
         {
             gameOver = false;
+            wallPosList = new Vector2Int[MaxEntityLimit];
+            boxPosList = new Vector2Int[MaxEntityLimit];
+            goalPosList = new Vector2Int[MaxEntityLimit];
+            goalStateList = new bool[MaxEntityLimit];
             InitializeEntityList();
         }
 
@@ -243,16 +300,45 @@ namespace Sokoban
         static void RenderGameScreen()
         {
             Console.Clear();
+            PrintEntities();
+        }
+
+        private static void PrintEntities()
+        {
+            PrintWalls();
+            PrintBoxes();
+            PrintGoals();
             PrintEntityAtPos(playerPos, EntityType.Player);
-            PrintEntityAtPos(wallPos, EntityType.Wall);
-            PrintEntityAtPos(boxPos, EntityType.Box);
-            if (!isGoalUsed)
+        }
+
+        private static void PrintWalls()
+        {
+            for (int i = 0; i < wallCount; i++)
             {
-                PrintEntityAtPos(goalPos, EntityType.NotUsedGoal);
+                PrintEntityAtPos(wallPosList[i], EntityType.Wall);
             }
-            else
+        }
+
+        private static void PrintBoxes()
+        {
+            for (int i = 0; i < boxCount; i++)
             {
-                PrintEntityAtPos(goalPos, EntityType.UsedGoal);
+                PrintEntityAtPos(boxPosList[i], EntityType.Box);
+            }
+        }
+
+        private static void PrintGoals()
+        {
+            for (int i = 0; i < goalCount; i++)
+            {
+                if (!goalStateList[i])
+                {
+                    PrintEntityAtPos(goalPosList[i], EntityType.NotUsedGoal);
+                }
+                else
+                {
+                    PrintEntityAtPos(goalPosList[i], EntityType.UsedGoal);
+                }
             }
         }
 
