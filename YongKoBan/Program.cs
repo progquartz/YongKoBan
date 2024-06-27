@@ -2,6 +2,7 @@
 using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
+using YongKoBan;
 
 namespace Sokoban
 {
@@ -60,6 +61,12 @@ namespace Sokoban
 
         private const int MaxEntityLimit = 10;
 
+        private const int MIN_X = 0;
+        private const int MIN_Y = 0;
+        private const int MAX_X = 15;
+        private const int MAX_Y = 15;
+
+
         //플레이어
         private static Vector2Int playerPos;
         static Vector2Int playerInputDir;
@@ -71,8 +78,9 @@ namespace Sokoban
         private static Vector2Int[] boxPosList;
         private static int boxCount = 0;
 
-        private static Vector2Int[] goalPosList;
-        private static bool[] goalStateList;
+        private static Goal[] goalList;
+        //private static Vector2Int[] goalList;
+        //private static bool[] goalStateList;
         private static int goalCount = 0;
         
 
@@ -86,6 +94,61 @@ namespace Sokoban
             StartGameLoop();
         }
 
+        static void InitializeGame()
+        {
+            InitializeConsole();
+            InitializeGameData();
+            InitializeEntityPos();
+        }
+
+        private static void InitializeEntityPos()
+        {
+
+            playerPos = new Vector2Int(5, 8);
+
+            wallPosList[wallCount++] = new Vector2Int(5, 3);
+            wallPosList[wallCount++] = new Vector2Int(5, 4);
+            wallPosList[wallCount++] = new Vector2Int(5, 5);
+
+            boxPosList[boxCount++] = new Vector2Int(4, 2);
+            boxPosList[boxCount++] = new Vector2Int(4, 3);
+            boxPosList[boxCount++] = new Vector2Int(4, 1);
+
+            goalList[goalCount++] = new Goal(new Vector2Int(7, 1));
+            goalList[goalCount++] = new Goal(new Vector2Int(7, 2));
+            goalList[goalCount++] = new Goal(new Vector2Int(7, 3));
+            
+
+        }
+
+        private static void InitializeGameData()
+        {
+            gameOver = false;
+            wallPosList = new Vector2Int[MaxEntityLimit];
+            boxPosList = new Vector2Int[MaxEntityLimit];
+            goalList = new Goal[MaxEntityLimit];
+            InitializeEntityList();
+        }
+
+        private static void InitializeEntityList()
+        {
+            entityText[(int)EntityType.Player] = 'P';
+            entityText[(int)EntityType.Wall] = '#';
+            entityText[(int)EntityType.Box] = 'O';
+            entityText[(int)EntityType.NotUsedGoal] = 'G';
+            entityText[(int)EntityType.UsedGoal] = 'U';
+        }
+
+        private static void InitializeConsole()
+        {
+            Console.ResetColor();
+            Console.CursorVisible = false;
+            Console.Title = "Yongkoban";
+            Console.BackgroundColor = ConsoleColor.DarkBlue;
+            Console.ForegroundColor = ConsoleColor.Gray;
+            Console.Clear();
+        }
+
         static void StartGameLoop()
         {
             while (true)
@@ -95,7 +158,7 @@ namespace Sokoban
                     CheckPlayerInput();
                     CalculateGameLogic();
                     RenderGameScreen();
-                    //CheckGameClear();
+                    gameOver = CheckGameClear();
                 }
                 else
                 {
@@ -104,6 +167,8 @@ namespace Sokoban
                 }
             }
         }
+
+
 
         private static void CheckPlayerInput()
         {
@@ -114,7 +179,6 @@ namespace Sokoban
             switch (currentKeyInfo.Key)
             {
                 case ConsoleKey.LeftArrow:
-
                     playerInputDir.x -= 1;
                     break;
 
@@ -145,14 +209,14 @@ namespace Sokoban
 
         private static void CheckBoxGoal()
         {
-            for (int goalIndex = 0; goalIndex < goalPosList.Length; goalIndex++)
+            for (int goalIndex = 0; goalIndex < goalCount; goalIndex++)
             {
-                for (int boxIndex = 0; boxIndex < boxPosList.Length; boxIndex++)
+                for (int boxIndex = 0; boxIndex < boxCount; boxIndex++)
                 {
-                    if (!goalStateList[goalIndex] && goalPosList[goalIndex] == boxPosList[boxIndex])
+                    if (!goalList[goalIndex].isGoalUsed && goalList[goalIndex].pos == boxPosList[boxIndex])
                     {
                         boxPosList[boxIndex] = new Vector2Int(-1, -1);
-                        goalStateList[goalIndex] = true;
+                        goalList[goalIndex].isGoalUsed = true;
                     }
                 }
             }
@@ -160,16 +224,31 @@ namespace Sokoban
 
         private static void HandlePlayerTurn()
         {
-            bool isPlayerBlocked = false;
-            isPlayerBlocked |= CheckCollisionWall();
-            isPlayerBlocked |= CheckCollisionPushable();
-            if (!isPlayerBlocked)
+            bool isPlayerMoveNotValid = false;
+            
+            // 한번에 충돌이나 오류의 유형이 한 가지밖에 일어날 수 없음. 복잡도 줄이기.
+            isPlayerMoveNotValid |= CheckPlayerPosValid();
+            if(!isPlayerMoveNotValid) isPlayerMoveNotValid |= CheckCollisionWall();
+            if(!isPlayerMoveNotValid) isPlayerMoveNotValid |= CheckCollisionBox();
+
+            if (!isPlayerMoveNotValid)
             {
                 MovePlayer();
             }
         }
 
-        private static bool CheckCollisionPushable()
+        private static bool CheckPlayerPosValid()
+        {
+            Vector2Int playerPosUpdated = playerPos + playerInputDir;
+            if (playerPosUpdated.x < MIN_X || playerPosUpdated.y < MIN_Y || playerPosUpdated.x > MAX_X ||
+                playerPosUpdated.y > MAX_Y)
+            {
+                return true;
+            }
+
+            return false;
+        }
+        private static bool CheckCollisionBox()
         {
             bool isPlayerBlocked = false;
             for (int i = 0; i < boxCount; i++)
@@ -242,59 +321,17 @@ namespace Sokoban
             playerPos += playerInputDir;
         }
 
-        static void InitializeGame()
+        private static bool CheckGameClear()
         {
-            InitializeConsole();
-            InitializeGameData();
-            InitializeEntityPos();
-        }
+            for (int i = 0; i < goalCount; i++)
+            {
+                if (!goalList[i].isGoalUsed)
+                {
+                    return false;
+                }
+            }
 
-        private static void InitializeEntityPos()
-        {
-            
-            playerPos = new Vector2Int(5, 8);
-
-            wallPosList[wallCount++] = new Vector2Int(5, 3);
-            wallPosList[wallCount++] = new Vector2Int(5, 4);
-            wallPosList[wallCount++] = new Vector2Int(5, 5);
-
-            boxPosList[boxCount++] = new Vector2Int(4, 2);
-            boxPosList[boxCount++] = new Vector2Int(4, 3);
-            boxPosList[boxCount++] = new Vector2Int(4, 1);
-
-            goalPosList[goalCount++] = new Vector2Int(7, 1);
-            goalPosList[goalCount++] = new Vector2Int(7, 2);
-            goalPosList[goalCount++] = new Vector2Int(7, 3);
-
-        }
-
-        private static void InitializeGameData()
-        {
-            gameOver = false;
-            wallPosList = new Vector2Int[MaxEntityLimit];
-            boxPosList = new Vector2Int[MaxEntityLimit];
-            goalPosList = new Vector2Int[MaxEntityLimit];
-            goalStateList = new bool[MaxEntityLimit];
-            InitializeEntityList();
-        }
-
-        private static void InitializeEntityList()
-        {
-            entityText[(int)EntityType.Player] = 'P';
-            entityText[(int)EntityType.Wall] = '#';
-            entityText[(int)EntityType.Box] = 'O';
-            entityText[(int)EntityType.NotUsedGoal] = 'G';
-            entityText[(int)EntityType.UsedGoal] = 'U';
-        }
-
-        private static void InitializeConsole()
-        {
-            Console.ResetColor();
-            Console.CursorVisible = false;
-            Console.Title = "Yongkoban";
-            Console.BackgroundColor = ConsoleColor.DarkBlue;
-            Console.ForegroundColor = ConsoleColor.Gray;
-            Console.Clear();
+            return true;
         }
 
         static void RenderGameScreen()
@@ -331,13 +368,13 @@ namespace Sokoban
         {
             for (int i = 0; i < goalCount; i++)
             {
-                if (!goalStateList[i])
+                if (!goalList[i].isGoalUsed)
                 {
-                    PrintEntityAtPos(goalPosList[i], EntityType.NotUsedGoal);
+                    PrintEntityAtPos(goalList[i].pos, EntityType.NotUsedGoal);
                 }
                 else
                 {
-                    PrintEntityAtPos(goalPosList[i], EntityType.UsedGoal);
+                    PrintEntityAtPos(goalList[i].pos, EntityType.UsedGoal);
                 }
             }
         }
