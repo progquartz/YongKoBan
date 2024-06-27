@@ -11,7 +11,8 @@ namespace Sokoban
         Player = 0,
         Wall = 1,
         Box = 2,
-        Goal = 3,
+        NotUsedGoal = 3,
+        UsedGoal = 4,
 
     }
     public struct Vector2Int
@@ -64,6 +65,7 @@ namespace Sokoban
         private static Vector2Int wallPos;
         private static Vector2Int boxPos;
         private static Vector2Int goalPos;
+        private static bool isGoalUsed = false;
 
         // 엔티티 정보
         private static char[] entityText = new char[10];
@@ -134,9 +136,10 @@ namespace Sokoban
 
         private static void CheckBoxGoal()
         {
-            if (goalPos == boxPos)
+            if (!isGoalUsed &&goalPos == boxPos)
             {
                 boxPos = new Vector2Int(-1, -1);
+                isGoalUsed = true;
             }
         }
 
@@ -223,7 +226,8 @@ namespace Sokoban
             entityText[(int)EntityType.Player] = 'P';
             entityText[(int)EntityType.Wall] = '#';
             entityText[(int)EntityType.Box] = 'O';
-            entityText[(int)EntityType.Goal] = 'G';
+            entityText[(int)EntityType.NotUsedGoal] = 'G';
+            entityText[(int)EntityType.UsedGoal] = 'U';
         }
 
         private static void InitializeConsole()
@@ -242,7 +246,14 @@ namespace Sokoban
             PrintEntityAtPos(playerPos, EntityType.Player);
             PrintEntityAtPos(wallPos, EntityType.Wall);
             PrintEntityAtPos(boxPos, EntityType.Box);
-            PrintEntityAtPos(goalPos, EntityType.Goal);
+            if (!isGoalUsed)
+            {
+                PrintEntityAtPos(goalPos, EntityType.NotUsedGoal);
+            }
+            else
+            {
+                PrintEntityAtPos(goalPos, EntityType.UsedGoal);
+            }
         }
 
         static void PrintEntityAtPos(Vector2Int pos, EntityType type)
